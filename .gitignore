@@ -1,6 +1,7 @@
 app/.classpath
 app/.project
 .idea/
+.kotlin/
 .project
 .settings/
 *.iml

@@ -36,20 +36,13 @@ public class FptnServerViewModel extends AndroidViewModel {
 
     private final FptnServerRepository fptnServerRepository;
 
-    @Getter
-    private final MutableLiveData<ConnectionState> connectionStateMutableLiveData = new MutableLiveData<>(ConnectionState.DISCONNECTED);
-    @Getter
-    private final MutableLiveData<String> downloadSpeedAsStringLiveData = new MutableLiveData<>(new DataRateCalculator(1000).getFormatString());
-    @Getter
-    private final MutableLiveData<String> uploadSpeedAsStringLiveData = new MutableLiveData<>(new DataRateCalculator(1000).getFormatString());
-    @Getter
-    private final MutableLiveData<String> timerTextLiveData = new MutableLiveData<>("00:00:00");
-    @Getter
-    private final MutableLiveData<String> errorTextLiveData = new MutableLiveData<>("");
-    @Getter
-    private final LiveData<List<FptnServerDto>> serverDtoListLiveData;
-    @Getter
-    private final MutableLiveData<FptnServerDto> selectedServerLiveData = new MutableLiveData<>(FptnServerDto.AUTO);
+    public final MutableLiveData<ConnectionState> connectionStateMutableLiveData = new MutableLiveData<>(ConnectionState.DISCONNECTED);
+    public final MutableLiveData<String> downloadSpeedAsStringLiveData = new MutableLiveData<>(new DataRateCalculator(1000).getFormatString());
+    public final MutableLiveData<String> uploadSpeedAsStringLiveData = new MutableLiveData<>(new DataRateCalculator(1000).getFormatString());
+    public final MutableLiveData<String> timerTextLiveData = new MutableLiveData<>("00:00:00");
+    public final MutableLiveData<String> errorTextLiveData = new MutableLiveData<>("");
+    public final LiveData<List<FptnServerDto>> serverDtoListLiveData;
+    public final MutableLiveData<FptnServerDto> selectedServerLiveData = new MutableLiveData<>(FptnServerDto.AUTO);
 
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
     private ScheduledFuture<?> scheduledFuture;
