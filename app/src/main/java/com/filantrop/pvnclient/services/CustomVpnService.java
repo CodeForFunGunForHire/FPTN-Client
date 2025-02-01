@@ -1,7 +1,6 @@
 package com.filantrop.pvnclient.services;
 
 import static com.filantrop.pvnclient.core.common.Constants.SELECTED_SERVER;
-import static com.filantrop.pvnclient.utils.ResourcesUtils.getStringResourceByName;
 
 import android.app.Notification;
 import android.app.NotificationChannel;
@@ -27,7 +26,7 @@ import com.filantrop.pvnclient.core.common.Constants;
 import com.filantrop.pvnclient.database.model.FptnServerDto;
 import com.filantrop.pvnclient.enums.ConnectionState;
 import com.filantrop.pvnclient.enums.HandlerMessageTypes;
-import com.filantrop.pvnclient.utils.ResourcesUtils;
+import com.filantrop.pvnclient.repository.FptnServerRepository;
 import com.filantrop.pvnclient.viewmodel.FptnServerViewModel;
 import com.filantrop.pvnclient.views.HomeActivity;
 import com.filantrop.pvnclient.views.speedtest.SpeedTestService;
@@ -37,7 +36,9 @@ import com.filantrop.pvnclient.vpnclient.exception.PVNClientException;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -76,6 +77,8 @@ public class CustomVpnService extends VpnService implements Handler.Callback {
     private SpeedTestService speedTestService;
 
     private FptnServerDto selectedServer;
+
+    private FptnServerRepository fptnServerRepository;
 
     // Binder given to clients.
     private final IBinder binder = new LocalBinder();
@@ -117,13 +120,16 @@ public class CustomVpnService extends VpnService implements Handler.Callback {
         try {
             speedTestService = new SpeedTestService();
         } catch (PVNClientException e) {
+            Log.e(TAG, "onCreate(): " + e.getMessage(), e);
             throw new RuntimeException(e);
         }
+
+        fptnServerRepository = new FptnServerRepository(getApplicationContext());
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        Log.i(TAG, "CustomVpnService.onStartCommand: " + intent.getAction());
+        Log.i(TAG, "CustomVpnService.onStartCommand: " + intent);
         if (ACTION_DISCONNECT.equals(intent.getAction())) {
             disconnect();
             return START_NOT_STICKY;
@@ -131,32 +137,27 @@ public class CustomVpnService extends VpnService implements Handler.Callback {
             // Достаем параметры для подключения из intent
             selectedServer = (FptnServerDto) intent.getSerializableExtra(SELECTED_SERVER);
             if (FptnServerDto.AUTO.equals(selectedServer)) {
-                if (fptnViewModel == null) {
-                    String error = "fptnViewModel == null";
-                    Log.e(TAG, "onStartCommand: " + error);
-                    fptnViewModel.getErrorTextLiveData().postValue(error);
+                try {
+                    List<FptnServerDto> fptnServerDtos = fptnServerRepository.getAllServersListFuture().get();
+                    Optional.ofNullable(fptnViewModel).ifPresent(model -> model.getConnectionStateMutableLiveData().postValue(ConnectionState.CONNECTING));
+                    selectedServer = speedTestService.findFastestServer(fptnServerDtos);
+                    Optional.ofNullable(fptnViewModel).ifPresent(model -> model.getSelectedServerLiveData().postValue(selectedServer));
+                } catch (ExecutionException | InterruptedException | PVNClientException e) {
+                    Log.e(TAG, "onStartCommand: findFastestServer error! ", e);
+                    Optional.ofNullable(fptnViewModel).ifPresent(model -> model.getConnectionStateMutableLiveData().postValue(ConnectionState.DISCONNECTED));
+                    Optional.ofNullable(fptnViewModel).ifPresent(model -> model.getErrorTextLiveData().postValue(e.getMessage()));
                     selectedServer = null;
-                } else {
-                    try {
-                        fptnViewModel.getConnectionStateMutableLiveData().postValue(ConnectionState.CONNECTING);
-                        selectedServer = speedTestService.findFastestServer(fptnViewModel.getServerDtoListLiveData().getValue());
-                        fptnViewModel.getSelectedServerLiveData().postValue(selectedServer);
-                    } catch (InterruptedException | PVNClientException e) {
-                        Log.e(TAG, "onStartCommand: findFastestServer error! ", e);
-                        fptnViewModel.getConnectionStateMutableLiveData().postValue(ConnectionState.DISCONNECTED);
-                        fptnViewModel.getErrorTextLiveData().postValue(e.getMessage());
-                        selectedServer = null;
-                    }
                 }
             }
 
             if (selectedServer == null) {
                 Log.e(TAG, "onStartCommand: selectedServer is null");
+                Optional.ofNullable(fptnViewModel).ifPresent(model -> model.getErrorTextLiveData().postValue(ErrorCode.ALL_SERVERS_UNREACHABLE.getValue()));
                 return START_NOT_STICKY;
             }
 
             connect(selectedServer.getHost(), selectedServer.getPort(), selectedServer.getUsername(), selectedServer.getPassword());
-            return START_STICKY;
+            return START_REDELIVER_INTENT;
         }
     }
 
@@ -168,16 +169,19 @@ public class CustomVpnService extends VpnService implements Handler.Callback {
 
 
     public void updateConnectionStateInViewModel() {
-        if (mConnection.get() != null) {
-            fptnViewModel.getConnectionStateMutableLiveData().postValue(ConnectionState.CONNECTED);
-            //Передаем на UI актуальные параметры подключения
-            fptnViewModel.startTimer(mConnection.get().first.getConnectionTime());
-            //fptnViewModel.getSelectedServerLiveData().setValue(selectedServer);
-        } else if (mConnection.get() == null && mConnectingThread.get() != null) {
-            fptnViewModel.getConnectionStateMutableLiveData().postValue(ConnectionState.CONNECTING);
-        } else if (mConnection.get() == null && mConnectingThread.get() == null) {
-            fptnViewModel.getConnectionStateMutableLiveData().postValue(ConnectionState.DISCONNECTED);
-        }
+        Optional.ofNullable(fptnViewModel).ifPresent(model -> {
+            if (mConnection.get() != null) {
+                model.getConnectionStateMutableLiveData().postValue(ConnectionState.CONNECTED);
+                //Передаем на UI актуальные параметры подключения
+                model.startTimer(mConnection.get().first.getConnectionTime());
+                // connected server
+                model.getSelectedServerLiveData().setValue(selectedServer);
+            } else if (mConnection.get() == null && mConnectingThread.get() != null) {
+                model.getConnectionStateMutableLiveData().postValue(ConnectionState.CONNECTING);
+            } else if (mConnection.get() == null && mConnectingThread.get() == null) {
+                model.getConnectionStateMutableLiveData().postValue(ConnectionState.DISCONNECTED);
+            }
+        });
     }
 
     @Override
@@ -187,33 +191,35 @@ public class CustomVpnService extends VpnService implements Handler.Callback {
         HandlerMessageTypes type = Arrays.stream(HandlerMessageTypes.values()).filter(t -> t.getValue() == message.what).findFirst().orElse(HandlerMessageTypes.UNKNOWN);
         switch (type) {
             case SPEED_INFO:
-                if (fptnViewModel != null) {
+                Optional.ofNullable(fptnViewModel).ifPresent(model -> {
                     Pair<String, String> downloadSpeedUploadSpeed = (Pair<String, String>) message.obj;
                     String downloadSpeed = downloadSpeedUploadSpeed.first;
                     String uploadSpeed = downloadSpeedUploadSpeed.second;
-                    fptnViewModel.getDownloadSpeedAsStringLiveData().postValue(downloadSpeed);
-                    fptnViewModel.getUploadSpeedAsStringLiveData().postValue(uploadSpeed);
+                    model.getDownloadSpeedAsStringLiveData().postValue(downloadSpeed);
+                    model.getUploadSpeedAsStringLiveData().postValue(uploadSpeed);
                     updateNotificationWithMessage("Connected to " + selectedServer.getServerInfo(), "Download: " + downloadSpeed + " Upload: " + uploadSpeed);
-                }
+                });
                 break;
             case CONNECTION_STATE:
-                if (fptnViewModel != null) {
+                Optional.ofNullable(fptnViewModel).ifPresent(model -> {
                     Pair<ConnectionState, Instant> connectionStateInstantPair = (Pair<ConnectionState, Instant>) message.obj;
                     Optional<ConnectionState> connectionState = Arrays.stream(ConnectionState.values()).filter(t -> t == connectionStateInstantPair.first).findFirst();
                     connectionState.ifPresent(state -> {
-                        fptnViewModel.getConnectionStateMutableLiveData().postValue(state);
+                        model.getConnectionStateMutableLiveData().postValue(state);
                         if (ConnectionState.CONNECTED.equals(state)) {
-                            fptnViewModel.startTimer(connectionStateInstantPair.second);
+                            model.startTimer(connectionStateInstantPair.second);
                             updateNotificationWithMessage("Connected to " + selectedServer.getServerInfo(), "");
                         } else if (ConnectionState.DISCONNECTED.equals(state)) {
-                            fptnViewModel.stopTimer();
+                            model.stopTimer();
                             disconnect();
                         }
                     });
-                }
+                });
                 break;
             case ERROR:
-                fptnViewModel.getErrorTextLiveData().postValue((String) message.obj);
+                Optional.ofNullable(fptnViewModel).ifPresent(model -> {
+                    model.getErrorTextLiveData().postValue((String) message.obj);
+                });
                 break;
             default:
                 Log.e(TAG, "unexpected message: " + message);
