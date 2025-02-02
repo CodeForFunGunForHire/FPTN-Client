@@ -72,4 +72,8 @@ https://batchar2.github.io/fptn/
 
     <string name="unknown_error">Error unknown! We don\'t know what has happened and it\'s scary</string>
 
+    <string name="home_title">Home</string>
+    <string name="settings_title">Settings</string>
+    <string name="not_connected">⚠️ You aren’t connected to the internet</string>
+
 </resources>

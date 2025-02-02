@@ -2,7 +2,5 @@
 <SmellBaseline>
   <ManuallySuppressedIssues></ManuallySuppressedIssues>
   <CurrentIssues>
-    <ID>MissingPackageDeclaration:AndroidApplicationConventionPlugin.kt$.AndroidApplicationConventionPlugin.kt</ID>
-    <ID>MissingPackageDeclaration:KotlinLibraryConventionPlugin.kt$.KotlinLibraryConventionPlugin.kt</ID>
   </CurrentIssues>
 </SmellBaseline>

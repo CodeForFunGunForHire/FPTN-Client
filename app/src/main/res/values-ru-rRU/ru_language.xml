@@ -69,4 +69,8 @@ https://batchar2.github.io/fptn/
     <string name="ssl_context_init_failed">Ошибка при инициализации контекста SSL!</string>
 
     <string name="unknown_error">Произошла неизвестная ошибка!</string>
+
+    <string name="home_title">Главная</string>
+    <string name="settings_title">Настройки</string>
+    <string name="not_connected">⚠️ Вы не подключены к интернету</string>
 </resources>

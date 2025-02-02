@@ -3,6 +3,7 @@ app/.project
 auth/
 core/
 .idea/
+.kotlin/
 .project
 .settings/
 *.iml

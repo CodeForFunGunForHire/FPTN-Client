@@ -1,4 +1,18 @@
-<resources>
-    <style name="Base.Theme.FptnClient" parent="@style/Theme.AppCompat.NoActionBar"/>
-    <style name="Theme.FptnClient" parent="Base.Theme.FptnClient" />
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <style name="NightAdjusted.Theme.PvnClient" parent="android:Theme.Material.Light.NoActionBar" />
+
+    <style name="Theme.PvnClient" parent="NightAdjusted.Theme.PvnClient">
+        <item name="android:forceDarkAllowed" tools:targetApi="29">false</item>
+    </style>
+
+    <style name="NightAdjusted.Theme.Splash" parent="Theme.SplashScreen">
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
+    </style>
+
+    <style name="Theme.PvnClient.Splash" parent="NightAdjusted.Theme.Splash">
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash</item>
+        <item name="windowSplashScreenBackground">@color/splash_screen_background</item>
+        <item name="postSplashScreenTheme">@style/Theme.PvnClient</item>
+    </style>
 </resources>

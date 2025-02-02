@@ -79,7 +79,7 @@ public class SettingsActivity extends AppCompatActivity {
         });
 
         fptnViewModel = new ViewModelProvider(this).get(FptnServerViewModel.class);
-        fptnViewModel.getServerDtoListLiveData().observe(this, fptnServerDtos -> {
+        fptnViewModel.serverDtoListLiveData.observe(this, fptnServerDtos -> {
             if (fptnServerDtos != null && !fptnServerDtos.isEmpty()) {
                 serverListView.setAdapter(new FptnServerAdapter(fptnServerDtos, R.layout.settings_server_list_item)); // NEED TO CHANGE THE ITEM LAYOUT
                 setListViewHeightBasedOnChildren(serverListView);

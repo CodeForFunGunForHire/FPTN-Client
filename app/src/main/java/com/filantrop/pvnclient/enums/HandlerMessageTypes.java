@@ -10,7 +10,7 @@ public enum HandlerMessageTypes {
     ERROR(9881),
     UNKNOWN(6000);
 
-    final int value;
+    public final int value;
 
     HandlerMessageTypes(int value) {
         this.value = value;

@@ -4,6 +4,7 @@ ktlint_code_style = ktlint_official
 indent_size=4
 continuation_indent_size=2
 ktlint_standard_function-expression-body=disabled
+ktlint_standard_multiline-expression-wrapping=disabled
 max_line_length = 120
 
 
